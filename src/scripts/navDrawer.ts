@@ -47,7 +47,7 @@ function setupLeftDrawer(root: Element) {
   backdrop.addEventListener('click', closeDrawer);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
 
-  // ✅ Reset when breakpoint crosses to desktop
+  // Reset when breakpoint crosses to desktop
   const mq = window.matchMedia('(min-width: 901px)');
   function handleMQ(ev: MediaQueryListEvent | MediaQueryList) {
     if ('matches' in ev ? ev.matches : ev.matches) {
