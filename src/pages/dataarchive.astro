@@ -4,7 +4,7 @@ import { getCollection } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
 
 const pages = await getCollection('pages');
-const page = pages.find((p: CollectionEntry<'pages'>) => p.slug === 'homepage');
+const page = pages.find((p: CollectionEntry<'pages'>) => p.slug === 'dataarchive');
 
 if (!page) {
   throw new Error("Could not find page!");
@@ -16,7 +16,6 @@ const { data } = page;
 ---
 
 <BaseLayout title={data.title}>
-	<h1>{data.title}</h1>
-	<h2>{data.subtitle}</h2>  
-  	<Content />
+<h1>{data.title}</h1>
+  <Content />
 </BaseLayout>
