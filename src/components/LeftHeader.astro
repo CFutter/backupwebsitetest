@@ -1,26 +1,39 @@
 ---
 const links = [
-  { href: '/', label: 'Home' },
-  { href: '/articles', label: 'Articles' },
-  { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' },
+  { href: '/', label: 'Home', key: 'homepagesubpages' },
+  { href: '/articles', label: 'Articles', key: 'articlessubpages' },
+  { href: '/about', label: 'About', key: 'aboutsubpages' },
+  { href: '/contact', label: 'Contact', key: 'contactsubpages' },
 ];
 
 const { pathname } = Astro.url;
+
+// Convert file paths to URL paths
+function filePathToUrl(filePath: string): string {
+  return filePath
+    .replace('/src/pages', '')
+    .replace('.astro', '')
+    .replace('/index', '');
+}
+
+// Dynamically import all subpages grouped by folder
+const subpages = {
+  homepagesubpages: Object.keys(import.meta.glob('/src/pages/homepage/*.astro')).map(filePathToUrl),
+  articlessubpages: Object.keys(import.meta.glob('/src/pages/articles/*.astro')).map(filePathToUrl),
+  aboutsubpages: Object.keys(import.meta.glob('/src/pages/about/*.astro')).map(filePathToUrl),
+  contactsubpages: Object.keys(import.meta.glob('/src/pages/contact/*.astro')).map(filePathToUrl),
+};
 ---
 
 <aside class="site-sidebar" data-component="site-sidebar">
-
-  <!-- Mobile top bar: brand + hamburger + close arrow -->
   <div class="site-bar">
-    <!-- Left: Hamburger -->
+    <!-- Hamburger -->
     <button class="site-menu-toggle" type="button" aria-label="Open menu" aria-controls="site-drawer" aria-expanded="false">
-      <svg class="icon-burger" aria-hidden="true">
-        <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      <svg class="icon-burger" aria-hidden="true" viewBox="0 0 24 24" width="24" height="24">
+        <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" />
       </svg>
     </button>
-
-    <!-- Right: Arrow close icon -->
+    <!-- Close -->
     <button class="site-menu-close" type="button" aria-label="Close menu" aria-controls="site-drawer" aria-expanded="false">
       <svg class="icon-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <line x1="4" y1="12" x2="16" y2="12" />
@@ -30,22 +43,29 @@ const { pathname } = Astro.url;
     </button>
   </div>
 
-  <!-- Drawer: static column on desktop; off-canvas on mobile -->
   <div class="site-drawer" id="site-drawer" data-open="false">
     <nav aria-label="Main">
       <ul class="site-nav">
         {links.map((l) => (
           <li>
-            <a
-              href={l.href}
-              aria-current={pathname === l.href ? 'page' : undefined}
-            >{l.label}</a>
+            <a href={l.href} data-subpages={l.key} aria-current={pathname === l.href ? 'page' : undefined}>
+              {l.label}
+            </a>
           </li>
         ))}
       </ul>
     </nav>
   </div>
-
-  <!-- Backdrop for the mobile drawer -->
   <div class="site-backdrop" hidden></div>
+</aside>
+
+<!-- Second sidebar -->
+<aside class="sub-sidebar">
+  <nav>
+    <ul id="sub-sidebar-links"></ul>
+  </nav>
+  
+  <script define:vars={{ subpages }}>
+    window.__SUBPAGES__ = subpages;
+  </script>
 </aside>
