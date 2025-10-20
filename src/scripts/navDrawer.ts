@@ -9,6 +9,7 @@ function setupLeftDrawer(root: Element) {
     console.warn('[navDrawer] Missing elements', { toggle, drawer, backdrop });
     return;
   }
+  if (closeBtn) closeBtn.hidden = true;
 
   function openDrawer() {
     drawer.dataset.open = 'true';
@@ -19,11 +20,13 @@ function setupLeftDrawer(root: Element) {
 
     // show right-side X, hide left hamburger
     if (closeBtn) closeBtn.hidden = false;
-    toggle.hidden = true;
+    toggle.classList.add('is-hidden');
 
     // optional: focus first link
-    drawer.querySelector<HTMLAnchorElement>('a')?.focus({ preventScroll: true });
-  }
+    requestAnimationFrame(() => {
+      drawer.querySelector<HTMLAnchorElement>('a')?.focus({ preventScroll: true });
+    });
+}
 
   function closeDrawer() {
     drawer.dataset.open = 'false';
@@ -34,9 +37,11 @@ function setupLeftDrawer(root: Element) {
 
     // hide X, show hamburger
     if (closeBtn) closeBtn.hidden = true;
-    toggle.hidden = false;
+    toggle.classList.remove('is-hidden');
 
-    toggle.focus({ preventScroll: true });
+    requestAnimationFrame(() => {
+      toggle.focus({ preventScroll: true });
+    });
   }
 
   // Toggle handlers
