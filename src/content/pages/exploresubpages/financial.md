@@ -1,0 +1,5 @@
+---
+title: "Explore: Financial Source Material"
+---
+
+Here should be a feed with financial information, from the dataarchive. Generic if not loged in, personalised if loged in.

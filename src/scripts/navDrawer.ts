@@ -73,6 +73,20 @@ function setupSubSidebar() {
   const mainLinks = document.querySelectorAll<HTMLAnchorElement>('.site-nav a');
   const mainSidebar = document.querySelector<HTMLElement>('#site-drawer');
 
+  const PIN_KEY = 'subSidebarPinned';
+  const mqDesktop = window.matchMedia('(min-width: 901px)');
+  const isDesktop = () => mqDesktop.matches;
+
+  const pinBtn = subSidebar.querySelector<HTMLButtonElement>('.sub-pin');
+  
+  let isPinned = (localStorage.getItem(PIN_KEY) === '1');
+  if (pinBtn) {
+    pinBtn.setAttribute('aria-pressed', isPinned ? 'true' : 'false');
+  }
+  if (isPinned && isDesktop()) {
+    document.documentElement.classList.add('sub-pinned');
+  }
+
   // Early exit if elements are not found
   if (!subSidebar || !linksContainer || !mainLinks.length) {
     return;
@@ -81,6 +95,34 @@ function setupSubSidebar() {
   let hoverTimeout: number | null = null;
   let isSubSidebarOpen = false;
   const STORAGE_KEY = 'openSubSidebarKey';
+
+  
+  // --- Rehydrate immediately (prevents flicker) — ADD THIS BLOCK ---
+
+  const savedKey = sessionStorage.getItem(STORAGE_KEY);
+
+  if (isDesktop()) {
+    if (isPinned) {
+      // If pinned, keep it open even if not hovering
+      if (savedKey && populateSubSidebar(savedKey)) {
+        subSidebar.classList.add('open');
+        isSubSidebarOpen = true;
+      } else {
+        // If there's no saved submenu, keep panel open but empty (or you can choose to close)
+        subSidebar.classList.add('open');
+        isSubSidebarOpen = true;
+      }
+    } else if (savedKey && populateSubSidebar(savedKey)) {
+      subSidebar.classList.add('open');
+      isSubSidebarOpen = true;
+    } else {
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
+  }
+  
+  // Runtime takes over from bootstrap class
+  document.documentElement.classList.remove('sub-open');
+  
 
   // --- Helper Functions ---
 
@@ -98,28 +140,70 @@ function setupSubSidebar() {
   }
 
   function populateSubSidebar(key: string): boolean {
-    const subpagesData = (window as any).__SUBPAGES__;
-    const subpagesForCategory = subpagesData ? subpagesData[key] : [];
+    
+const subpagesData = (window as any).__SUBPAGES__;
+const subpagesForCategory: string[] = subpagesData?.[key] ?? [];
+if (!Array.isArray(subpagesForCategory) || subpagesForCategory.length === 0) {
+  return false;
+}
 
-    if (!subpagesForCategory || subpagesForCategory.length === 0) {
-      return false;
-    }
+const normalize = (p: string) => (p.replace(/\/+$/, '') || '/');
+const normalizedCurrent = normalize(window.location.pathname);
 
-    const currentPathname = window.location.pathname;
-    // Normalize paths to ensure matching works even with trailing slashes
-    const normalize = (p: string) => p.replace(/\/+$/, "") || '/';
-    const normalizedCurrent = normalize(currentPathname);
+// Optional icon map (safe if not present)
+const iconMap: Record<string, string> | undefined = (window as any).__SUB_ICONS__;
 
-    linksContainer.innerHTML = subpagesForCategory.map((href: string) => {
-       // Simple name extraction - adjust if your URLs are complex
-      const name = href.split('/').filter(Boolean).pop() || 'Overview';
-      // Check if this link is the current active page
-      const isCurrent = normalize(href) === normalizedCurrent;
-      
-      return `<li><a href="${href}" ${isCurrent ? 'aria-current="page" class="sub-link active"' : 'class="sub-link"'} >${name}</a></li>`;
-    }).join('');
+// Clear and rebuild
+linksContainer.textContent = '';
 
-    return true;
+for (const href of subpagesForCategory) {
+  const li = document.createElement('li');
+  const a = document.createElement('a');
+  a.href = href;
+  a.className = 'sub-link';
+
+  // Active state
+  const isCurrent = normalize(href) === normalizedCurrent;
+  if (isCurrent) {
+    a.classList.add('active');
+    a.setAttribute('aria-current', 'page');
+  }
+
+  // Build a robust key from the last path segment to look up the icon
+  const lastSeg = href.split('/').filter(Boolean).pop() || '';
+  const decoded = decodeURIComponent(lastSeg);
+  const nameKey = decoded
+    .toLowerCase()
+    .replace(/\s+/g, '')         // "Data Archive" -> "dataarchive"
+    .replace(/-/g, '')           // "data-archive" -> "dataarchive"
+    .replace(/[^a-z0-9_-]/g, ''); // safety
+
+  // Optional icon (prepended), only if map + key exists
+  if (iconMap?.[nameKey]) {
+    const iconWrap = document.createElement('span');
+    iconWrap.className = 'sub-icon';
+    iconWrap.setAttribute('aria-hidden', 'true');
+    iconWrap.innerHTML = iconMap[nameKey]; // controlled SVG set
+    a.appendChild(iconWrap);
+  }
+
+  // Visible text label (decode %20, kebab -> Title Case)
+  const label =
+    lastSeg.includes('-')
+      ? decoded.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+      : decoded || 'Overview';
+
+  const textSpan = document.createElement('span');
+  textSpan.className = 'sub-text';
+  textSpan.textContent = label;
+  a.appendChild(textSpan);
+
+  li.appendChild(a);
+  linksContainer.appendChild(li);
+}
+
+return true;
+
   }
 
   function clearHoverTimeout() {
@@ -130,22 +214,22 @@ function setupSubSidebar() {
   }
 
   function scheduleClose() {
+    if (isPinned) return; // when pinned, never auto-close
     clearHoverTimeout();
-    hoverTimeout = window.setTimeout(() => {
-      closeSidebar();
-    }, 150); // Slightly increased timing for smoother bridge between gaps
+    hoverTimeout = window.setTimeout(() => closeSidebar(), 150);
   }
 
   // --- Event Handlers ---
 
   mainLinks.forEach(link => {
     link.addEventListener('mouseenter', () => {
+      if (!isDesktop()) return;
       clearHoverTimeout();
       
       const key = link.dataset.subpages;
       // If hovering a link with NO subpages, we should probably close the existing one
       if (!key) {
-        if (isSubSidebarOpen) scheduleClose();
+        if (!isPinned && isSubSidebarOpen) scheduleClose();
         return;
       }
 
@@ -155,12 +239,58 @@ function setupSubSidebar() {
         sessionStorage.setItem(STORAGE_KEY, key);
       } else {
         // Hovered a link that has a key but empty data
-        if (isSubSidebarOpen) scheduleClose();
+        if (!isPinned && isSubSidebarOpen) scheduleClose();
       }
     });
   });
 
   subSidebar.addEventListener('mouseenter', clearHoverTimeout);
+
+    
+  pinBtn?.addEventListener('click', () => {
+    isPinned = !isPinned;
+    localStorage.setItem(PIN_KEY, isPinned ? '1' : '0');
+    pinBtn.setAttribute('aria-pressed', isPinned ? 'true' : 'false');
+
+    if (isPinned) {
+      document.documentElement.classList.add('sub-pinned');
+      // Ensure open
+      subSidebar.classList.add('open');
+      isSubSidebarOpen = true;
+
+      // If no key is saved but we’re hovering a main link, try to capture it
+      const currentKey = sessionStorage.getItem(STORAGE_KEY);
+      if (!currentKey) {
+        // noop; panel can remain empty until hover/click selects a category
+      }
+    } else {
+      document.documentElement.classList.remove('sub-pinned');
+      // If pointer is not over either sidebar now, allow it to close
+      // (the existing mouseover bridge will handle it shortly)
+      scheduleClose();
+    }
+  });
+  
+  mqDesktop.addEventListener?.('change', (ev) => {
+    if (!ev.matches) {
+      // Entered mobile
+      subSidebar.classList.remove('open');
+      isSubSidebarOpen = false;
+      document.documentElement.classList.remove('sub-open');
+      document.documentElement.classList.remove('sub-pinned');
+      // Keep PIN_KEY and STORAGE_KEY so desktop restores state
+    } else {
+      // Back to desktop: restore classes
+      if (localStorage.getItem(PIN_KEY) === '1') {
+        document.documentElement.classList.add('sub-pinned');
+        subSidebar.classList.add('open');
+        isSubSidebarOpen = true;
+  
+        const k = sessionStorage.getItem(STORAGE_KEY);
+        if (k) populateSubSidebar(k);
+      }
+    }
+  });
 
   // When clicking ANY link in the sub-sidebar or main sidebar, 
   // we want to ENSURE it stays open during the navigation start.
@@ -179,34 +309,22 @@ function setupSubSidebar() {
   })
 
   document.addEventListener('mouseover', (e) => {
-    if (!isSubSidebarOpen) return;
-
+    if (!isDesktop() || !isSubSidebarOpen || isPinned) return;
+  
     const target = e.target as Element;
-    const isOverMainSidebar = mainSidebar?.contains(target);
+  
+    // Only count as "main nav hover" if over a real link (icon or its text),
+    // not just any empty part of the sidebar rail.
+    const mainLink = target.closest?.('.site-nav a');
+    const isOverMainLink = !!mainLink;
     const isOverSubSidebar = subSidebar.contains(target);
-    
-    if (!isOverMainSidebar && !isOverSubSidebar) {
+  
+    if (!isOverMainLink && !isOverSubSidebar) {
       scheduleClose();
     } else {
-      // We are over one of the sidebars, keep it open
       clearHoverTimeout();
     }
   });
-
-  // --- Initialization: Restore State ---
-  // This runs immediately when the JS loads on the new page
-  const savedKey = sessionStorage.getItem(STORAGE_KEY);
-  if (savedKey) {
-      // Verify the key still valid for this page/data
-      if (populateSubSidebar(savedKey)) {
-          openSidebar();
-          // Optimization: If your CSS supports it, you might want to 
-          // add a 'no-transition' class here temporarily to prevent 
-          // it from "sliding in" on every page load.
-      } else {
-          sessionStorage.removeItem(STORAGE_KEY);
-      }
-  }
 }
 
 // --- Initialization ---
