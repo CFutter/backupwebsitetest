@@ -74,20 +74,6 @@ img, picture, video, canvas, svg {
   flex-direction: column;
 }
 
-/* Primary nav takes the available space and centers its UL vertically */
-.site-nav-primary {
-  flex: 1 1 auto;              /* occupies remaining height */
-  display: flex;                /* allow centering the child UL */
-  align-items: center;          /* horizontal centering of the UL block */
-  justify-content: center;      /* vertical centering of the UL block */
-}
-
-/* Secondary nav sits at the bottom (no flex growth) */
-.site-nav-secondary {
-  flex: 0 0 auto;
-  margin-top: auto;             /* push to bottom edge */
-}
-
 
 .site-nav {
   display: flex;
@@ -213,6 +199,18 @@ img, picture, video, canvas, svg {
   clip:rect(0,0,0,0);
 }
 @media (min-width: 901px) {
+
+  .site-nav-primary {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;      /* center horizontally */
+    justify-content: center;  /* center vertically */
+  }
+  .site-nav-secondary {
+    flex: 0 0 auto;
+    margin-top: auto;         /* stays at the bottom */
+  }
+
   .sub-sidebar {
     position: fixed;
     top: 0;
@@ -293,6 +291,32 @@ img, picture, video, canvas, svg {
 
 .site-brand--desktop { display: none; }
 
+.site-drawer {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Primary group: occupy remaining space and center its contents vertically */
+.site-nav-primary {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;      /* vertical centering of the UL block */
+  align-items: stretch;         /* <-- ensure the UL can stretch horizontally */
+}
+
+
+/* Make the UL fill the drawer width and not auto-size to content */
+.site-nav-primary .site-nav {
+  width: 100%;                  /* <-- key to prevent horizontal centering */
+  align-items: stretch;         /* keep items full-width in the UL */
+  margin: 0;                    /* avoid any auto-centering margins */
+}
+
+/* Make each LI and A consume full width; keep links left-aligned */
+.site-nav-primary .site-nav li {
+  width: 100%;
+}
+
 .site-bar {
   display: flex;
   justify-content: space-between;
@@ -316,13 +340,20 @@ img, picture, video, canvas, svg {
 }
 
 .site-nav a {
-  flex-direction: row;      /* icon left, text right */
+  flex-direction: row;
   justify-content: flex-start;
-  text-align: left;
-  gap: 0.75rem;
-  margin-inline: 0;         /* mobile drawer already fills width; usually no negative margin needed */
-  padding: 0.75rem 1rem;
+  align-items: center;          /* vertical alignment of icon + text */
+  text-align: left;             /* ensure text is left aligned */
+  width: 100%;                  /* make the clickable area full-width */
+  margin-inline: 0;
 }
+
+/* Secondary group stays pinned to bottom */
+.site-nav-secondary {
+  flex: 0 0 auto;
+  margin-top: auto;
+}
+
 .site-nav a .nav-icon svg {
   width: 22px;
   height: 22px;
@@ -342,7 +373,6 @@ background: color-mix(in srgb, var(--accent) 16%, transparent);
 box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent) inset;
 }
 
-
 /* Off-canvas drawer (hidden by default) */
 .site-drawer {
   position: fixed;
@@ -359,7 +389,6 @@ box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent) inset;
   overflow-y: auto;
   z-index: 900;
 }
-
 
 /* Backdrop */
 .site-backdrop {
@@ -391,7 +420,7 @@ box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent) inset;
 .site-menu-close {
   position: fixed;
   top: 0.5rem;
-  left: 12rem;
+  left: 11rem;
   z-index: 1001;
   background: none;
   border: none;
