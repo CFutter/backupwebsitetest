@@ -140,71 +140,71 @@ function setupSubSidebar() {
   }
 
   function populateSubSidebar(key: string): boolean {
-    
-const subpagesData = (window as any).__SUBPAGES__;
-const subpagesForCategory: string[] = subpagesData?.[key] ?? [];
-if (!Array.isArray(subpagesForCategory) || subpagesForCategory.length === 0) {
-  return false;
-}
-
-const normalize = (p: string) => (p.replace(/\/+$/, '') || '/');
-const normalizedCurrent = normalize(window.location.pathname);
-
-// Optional icon map (safe if not present)
-const iconMap: Record<string, string> | undefined = (window as any).__SUB_ICONS__;
-
-// Clear and rebuild
-linksContainer.textContent = '';
-
-for (const href of subpagesForCategory) {
-  const li = document.createElement('li');
-  const a = document.createElement('a');
-  a.href = href;
-  a.className = 'sub-link';
-
-  // Active state
-  const isCurrent = normalize(href) === normalizedCurrent;
-  if (isCurrent) {
-    a.classList.add('active');
-    a.setAttribute('aria-current', 'page');
+    const itemsMap = (window as any).__SUBPAGE_ITEMS__ as
+      | Record<string, { href: string; label?: string; icon?: string }[]>
+      | undefined;
+  
+    const subpagesData = (window as any).__SUBPAGES__ as Record<string, string[]> | undefined;
+    const subItems = itemsMap?.[key];
+  
+    // If we have items with labels, use them; otherwise fall back to href array
+    const items: { href: string; label: string }[] = subItems
+      ? subItems.map(it => ({ href: it.href, label: it.label ?? it.href.split('/').pop() ?? 'Overview' }))
+      : (subpagesData?.[key] ?? []).map(href => {
+          const last = decodeURIComponent(href.split('/').filter(Boolean).pop() || 'Overview');
+          const label = last.includes('-')
+            ? last.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+            : last;
+          return { href, label };
+        });
+  
+    if (!items.length) return false;
+  
+    const normalize = (p: string) => (p.replace(/\/+$/, '') || '/');
+    const normalizedCurrent = normalize(window.location.pathname);
+  
+    linksContainer.textContent = '';
+    for (const { href, label } of items) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = href;
+      a.className = 'sub-link';
+  
+      // Active state
+      const isCurrent = normalize(href) === normalizedCurrent;
+      if (isCurrent) {
+        a.classList.add('active');
+        a.setAttribute('aria-current', 'page');
+      }
+  
+      // Optional icon (kept as-is if you wired SUB_ICONS)
+      const iconMap: Record<string, string> | undefined = (window as any).__SUB_ICONS__;
+      if (iconMap) {
+        const lastSeg = href.split('/').filter(Boolean).pop() || '';
+        const keyKebab = decodeURIComponent(lastSeg).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const svg = iconMap[keyKebab] || iconMap[lastSeg.toLowerCase().replace(/[\s-]/g, '')]; // fallback to “compressed”
+        if (svg) {
+          const i = document.createElement('span');
+          i.className = 'sub-icon';
+          i.setAttribute('aria-hidden', 'true');
+          i.innerHTML = svg;
+          a.appendChild(i);
+        }
+      }
+  
+      // Text
+      const t = document.createElement('span');
+      t.className = 'sub-text';
+      t.textContent = label;
+      a.appendChild(t);
+  
+      li.appendChild(a);
+      linksContainer.appendChild(li);
+    }
+  
+    return true;
   }
 
-  // Build a robust key from the last path segment to look up the icon
-  const lastSeg = href.split('/').filter(Boolean).pop() || '';
-  const decoded = decodeURIComponent(lastSeg);
-  const nameKey = decoded
-    .toLowerCase()
-    .replace(/\s+/g, '')         // "Data Archive" -> "dataarchive"
-    .replace(/-/g, '')           // "data-archive" -> "dataarchive"
-    .replace(/[^a-z0-9_-]/g, ''); // safety
-
-  // Optional icon (prepended), only if map + key exists
-  if (iconMap?.[nameKey]) {
-    const iconWrap = document.createElement('span');
-    iconWrap.className = 'sub-icon';
-    iconWrap.setAttribute('aria-hidden', 'true');
-    iconWrap.innerHTML = iconMap[nameKey]; // controlled SVG set
-    a.appendChild(iconWrap);
-  }
-
-  // Visible text label (decode %20, kebab -> Title Case)
-  const label =
-    lastSeg.includes('-')
-      ? decoded.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
-      : decoded || 'Overview';
-
-  const textSpan = document.createElement('span');
-  textSpan.className = 'sub-text';
-  textSpan.textContent = label;
-  a.appendChild(textSpan);
-
-  li.appendChild(a);
-  linksContainer.appendChild(li);
-}
-
-return true;
-
-  }
 
   function clearHoverTimeout() {
     if (hoverTimeout) {

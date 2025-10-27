@@ -1,0 +1,52 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DefaultContent from '../../templates/DefaultContent.astro';
+// import ProjectPage from '../../templates/ProjectPage.astro';
+// import DatasetPage from '../../templates/DatasetPage.astro';
+// import NewsItem from '../../templates/NewsItem.astro';
+import { getCollection, getEntry } from 'astro:content';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('pages', ({ data }) => data.showInNav !== false);
+  const groups = new Set(['about','explore','home','spaces']);
+
+  return entries.flatMap((e) => {
+    const [folder, ...rest] = e.slug.split('/');
+    if (!folder || rest.length === 0 || !groups.has(folder)) return [];
+    return [{ params: { group: folder, slug: rest.join('/') } }];
+  });
+}
+
+const { group, slug } = Astro.params;
+const contentSlug = `${group}/${slug}`;
+
+// Load the content entry
+const entry = await getEntry('pages', contentSlug);
+
+if (!entry) {
+  Astro.response.status = 404;
+  const NotFound = (await import('../../components/NotFound.astro')).default;
+  // IMPORTANT: pass the component, do not use JSX here
+  return Astro.render(NotFound);
+}
+
+// Render the collection entry
+const { Content } = await entry.render();
+const data = entry.data;                 
+const pageTitle = data?.title ?? 'Untitled';
+
+
+// Pick the template (only default for now)
+const template = data.template ?? 'default';
+const TemplateMap: Record<string, any> = {
+  default: DefaultContent,
+  // project: ProjectPage,
+  // dataset: DatasetPage,
+  // newsItem: NewsItem,
+};
+const Template = TemplateMap[template] ?? DefaultContent;
+---
+
+<BaseLayout title={pageTitle}>
+  <Template {Content} data={data} group={group} slug={slug} />
+</BaseLayout>

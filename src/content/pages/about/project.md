@@ -1,6 +1,12 @@
 ---
-title: "The Project"
+title: "Project"
+template: "default"
+navGroup: "about"
+navOrder: 5
+icon: "project"
+showInNav: true
 ---
+
 
 Here follows a description of the project's aims. How the code and data can and should be used, what it's limitations are, etc.
 

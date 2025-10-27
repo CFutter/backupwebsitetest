@@ -1,40 +1,88 @@
 ---
-const links = [
-  { href: '/',        label: 'Home',   key: 'homepagesubpages', icon: 'homepage',   section: 'primary' },
-  { href: '/spaces',  label: 'Spaces', key: 'spacessubpages',   icon: 'spaces', section: 'primary' },
-  { href: '/explore', label: 'Explore',key: 'exploresubpages',  icon: 'explore', section: 'primary' },
-  { href: '/about',   label: 'About',  key: 'aboutsubpages',    icon: 'about',  section: 'primary' },
-  { href: '/account', label: 'Account',icon: 'account',         section: 'secondary' },
-  { href: '/contact', label: 'Contact',icon: 'contact',         section: 'secondary' },
-];
+import { getCollection } from "astro:content";
 
+/** Collect content entries that should appear in navigation */
+const entries = await getCollection("pages", ({ data }) => data.showInNav !== false);
 
-const primaryLinks = links.filter(l => l.section === 'primary');
-const secondaryLinks = links.filter(l => l.section === 'secondary');
-
+/** Current URL path for top-level active state */
 const { pathname } = Astro.url;
 
-// Convert file paths to URL paths
-function filePathToUrl(filePath: string): string {
-  return filePath
-    .replace('/src/pages', '')
-    .replace('.astro', '')
-    .replace('/index', '');
+/** UI section keys (must match data-subpages on primary links) */
+const groups = ["home", "spaces", "explore", "about"] as const;
+type Group = (typeof groups)[number];
+
+/** Subpage item shape we keep server-side and (optionally) expose to client */
+type SubItem = { href: string; label: string; icon?: string; order: number };
+
+/** Buckets by section */
+const subpagesByGroup: Record<Group, SubItem[]> = {
+  home: [],
+  spaces: [],
+  explore: [],
+  about: [],
+};
+
+/** Build subpage lists from collection slugs like: "about/data-archive", "home/news" */
+for (const { slug, data } of entries) {
+  const [folder, ...rest] = slug.split("/"); // e.g., ["home","news"]
+  if (!folder || rest.length === 0) continue;
+
+  const group = folder as Group;              // now folder == section key
+  if (!groups.includes(group)) continue;
+
+  const last = rest.join("/");                // "news"
+  subpagesByGroup[group].push({
+    href: `/${group}/${last}`,                // "/home/news"
+    label: data.navLabel ?? data.title,       // <-- prefer navLabel over title
+    icon: data.icon,
+    order: typeof data.navOrder === "number" ? data.navOrder : 999,
+  });
 }
 
-// Dynamically import all subpages grouped by folder
-const subpages = {
-  homepagesubpages: Object.keys(import.meta.glob('/src/pages/homepage/*.astro')).map(filePathToUrl),
-  spacessubpages: Object.keys(import.meta.glob('/src/pages/spaces/*.astro')).map(filePathToUrl),
-  exploresubpages: Object.keys(import.meta.glob('/src/pages/explore/*.astro')).map(filePathToUrl),
-  aboutsubpages: Object.keys(import.meta.glob('/src/pages/about/*.astro')).map(filePathToUrl),
+/** Sort: order asc, then label asc */
+for (const g of groups) {
+  subpagesByGroup[g].sort(
+    (a, b) => a.order - b.order || a.label.localeCompare(b.label)
+  );
+}
+
+/** Top-level links (single source) */
+const primaryLinks = [
+  { href: "/",        label: "Home",    key: "home",    icon: "homepage" },
+  { href: "/spaces",  label: "Spaces",  key: "spaces",  icon: "spaces"   },
+  { href: "/explore", label: "Explore", key: "explore", icon: "explore"  },
+  { href: "/about",   label: "About",   key: "about",   icon: "about"    },
+];
+const secondaryLinks = [
+  { href: "/account", label: "Account", icon: "account" },
+  { href: "/contact", label: "Contact", icon: "contact" },
+];
+
+/** Legacy expose: arrays of hrefs (kept for backward compat if your JS still reads it) */
+const SUBPAGES = {
+  home:    subpagesByGroup.home.map((i) => i.href),
+  spaces:  subpagesByGroup.spaces.map((i) => i.href),
+  explore: subpagesByGroup.explore.map((i) => i.href),
+  about:   subpagesByGroup.about.map((i) => i.href),
 };
+
+/** New expose: full items (href + label [+ icon, order]) */
+const SUBPAGE_ITEMS = {
+  home:    subpagesByGroup.home,
+  spaces:  subpagesByGroup.spaces,
+  explore: subpagesByGroup.explore,
+  about:   subpagesByGroup.about,
+};
+
+
+/** Helper for top-level active state (treat section subpaths as active) */
+const isActive = (base: string) => pathname === base || pathname.startsWith(base + "/");
 
 /** Minimal, monochrome SVGs (stroke = currentColor) */
 
 const ICONS: Record<string, string> = {
   // MAIN
-  homepage: `
+  home: `
     <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor"
          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M3 11.5l9-7 9 7"/>
@@ -82,6 +130,7 @@ const ICONS: Record<string, string> = {
 };
 
 const SUB_ICONS: Record<string, string> = {
+  
   // ABOUT subpages
   blog: `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -93,7 +142,7 @@ const SUB_ICONS: Record<string, string> = {
       <path d="M11 9l4-4"/>
     </svg>
   `,
-  dataarchive: `
+  "data-archive": `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <rect x="3" y="5" width="18" height="4" rx="1"/>
@@ -118,7 +167,7 @@ const SUB_ICONS: Record<string, string> = {
       <path d="M8 12c-2 0-3-2-3-4 0-3 2.5-5 7-5s7 2 7 5c0 2-1 4-3 4"/>
     </svg>
   `,
-  theproject: `
+  project: `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M4 4h8l1 2h7v12H4z"/>
@@ -158,7 +207,7 @@ const SUB_ICONS: Record<string, string> = {
     </svg>
   `,
 
-  // HOMEPAGE subpages
+  // HOME subpages
   continue: `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -191,7 +240,6 @@ const SUB_ICONS: Record<string, string> = {
     </svg>
   `,
 };
-
 
 ---
 
@@ -281,8 +329,11 @@ const SUB_ICONS: Record<string, string> = {
     <ul id="sub-sidebar-links"></ul>
   </nav>
   
-  <script define:vars={{ subpages, SUB_ICONS }}>
-    window.__SUBPAGES__ = subpages;
+  <!-- Expose both the legacy href-only map and the new item map -->
+  <script define:vars={{ SUBPAGES, SUBPAGE_ITEMS, SUB_ICONS }}>
+    window.__SUBPAGES__ = SUBPAGES;               // legacy (href arrays)
+    window.__SUBPAGE_ITEMS__ = SUBPAGE_ITEMS;     // new (href + label [+ icon, order])
     window.__SUB_ICONS__ = SUB_ICONS;
+
   </script>
 </aside>

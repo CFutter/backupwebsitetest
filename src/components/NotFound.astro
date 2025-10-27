@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const title = 'Page not found';
+---
+
+<BaseLayout title={title}>
+  <section class="content" style="text-align:center; padding-block: min(12vh, 8rem);">
+    <p style="font-size: 3rem; line-height: 1; margin: 0; color: var(--fg-1);">404</p>
+    <h1 style="margin: .5rem 0 1rem; font-weight: 600;">{title}</h1>
+    <p style="margin: 0 auto 1.25rem; max-width: 60ch; color: var(--muted);">
+      Sorry—this page doesn’t exist or may have moved.
+    </p>
+    <p style="margin-top: 1.25rem;">
+      <a href="/">← Back to Home</a>
+    </p>
+  </section>
+</BaseLayout>

@@ -23,6 +23,7 @@ img, picture, video, canvas, svg {
   --bg-1: #e6e5e5;
   --fg-0: #110000;
   --fg-1: #000000;
+  --fg-3: #ff0000;
   --muted: #020202;
   --accent: #a3a2a2;
   --rule: color-mix(in srgb, var(--fg-1) 10%, transparent);
@@ -46,10 +47,12 @@ img, picture, video, canvas, svg {
   justify-content: center;        /* center the child block horizontally */
 }
 
-.layout-content .content {
-  width: min(68ch, 100%);         /* comfortable reading width */
-  margin: 0 auto;                 /* horizontally centered */
-  text-align: left;               /* keep body text left-aligned */
+
+/* One unified content width for the whole site */
+.content-block {
+  width: min(68ch, 100%);
+  margin: 0 auto;
+  text-align: left;     /* change to center if you prefer centered text */
 }
 
 
@@ -152,10 +155,10 @@ img, picture, video, canvas, svg {
 
 /* Sub-links: icon left of text, aligned and same size as the text */
 .sub-sidebar .sub-link {
-  display: flex;             /* ← change from block to flex */
+  display: flex;             
   align-items: center;
-  gap: 0.5rem;               /* space between icon and text */
-  margin-inline: -1.25rem;   /* match the main sidebar edge-to-edge feel */
+  gap: 0.5rem;               
+  margin-inline: 0rem;   
   padding: 0.5rem 1rem;
   color: var(--muted);
   text-decoration: none;
@@ -184,7 +187,6 @@ img, picture, video, canvas, svg {
   background-color: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--fg-1);
 }
-
 
 /* Highlight active sublink */
 .sub-sidebar .sub-link[aria-current="page"] {
@@ -221,7 +223,7 @@ img, picture, video, canvas, svg {
     display: none; /* hide by default */
     z-index: 1200;
     box-shadow: 2px 0 6px rgba(0,0,0,0.1);
-    padding: 2rem 1rem;
+    padding: 3rem 1rem;
     display: none;
   }
   
